@@ -1,0 +1,10 @@
+services:
+  mentor-bot:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - mentor_data:/app/data
+
+volumes:
+  mentor_data:
