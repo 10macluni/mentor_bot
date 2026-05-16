@@ -28,6 +28,12 @@
 
 Чтобы добавить игру, создайте новый модуль плагина, зарегистрируйте его в `bot/plugins/__init__.py` и укажите `GAME_PLUGIN=<key>` в `.env`.
 
+## Визуализация работы бота
+
+![Схема работы Universal Mentor Bot](docs/mentor_bot_workflow.png)
+
+Подробные Mermaid-диаграммы: [`docs/mentor_bot_visualization.md`](docs/mentor_bot_visualization.md). SVG-версия схемы: [`docs/mentor_bot_workflow.svg`](docs/mentor_bot_workflow.svg).
+
 ## Быстрый старт
 
 ```bash

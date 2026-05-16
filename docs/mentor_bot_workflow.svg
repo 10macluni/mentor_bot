@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2100" viewBox="0 0 1600 2100">
+  <defs>
+    <style>
+      .bg { fill: #0f172a; }
+      .panel { fill: #111827; stroke: #334155; stroke-width: 2; rx: 22; }
+      .title { fill: #f8fafc; font: 700 46px Arial, sans-serif; }
+      .subtitle { fill: #cbd5e1; font: 400 24px Arial, sans-serif; }
+      .section { fill: #e2e8f0; font: 700 30px Arial, sans-serif; }
+      .box { fill: #1e293b; stroke: #38bdf8; stroke-width: 2; rx: 16; }
+      .box2 { fill: #1e293b; stroke: #a78bfa; stroke-width: 2; rx: 16; }
+      .box3 { fill: #1e293b; stroke: #34d399; stroke-width: 2; rx: 16; }
+      .box4 { fill: #1e293b; stroke: #fb7185; stroke-width: 2; rx: 16; }
+      .small { fill: #e5e7eb; font: 400 20px Arial, sans-serif; }
+      .label { fill: #f8fafc; font: 700 22px Arial, sans-serif; }
+      .note { fill: #cbd5e1; font: 400 18px Arial, sans-serif; }
+      .arrow { stroke: #94a3b8; stroke-width: 3; marker-end: url(#arrowhead); fill: none; }
+      .arrowBlue { stroke: #38bdf8; stroke-width: 4; marker-end: url(#arrowheadBlue); fill: none; }
+      .arrowGreen { stroke: #34d399; stroke-width: 4; marker-end: url(#arrowheadGreen); fill: none; }
+      .pill { fill: #0f766e; rx: 18; }
+      .warn { fill: #7f1d1d; stroke: #fb7185; stroke-width: 2; rx: 16; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/></marker>
+    <marker id="arrowheadBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#38bdf8"/></marker>
+    <marker id="arrowheadGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#34d399"/></marker>
+  </defs>
+
+  <rect class="bg" width="1600" height="2100"/>
+  <text x="80" y="80" class="title">Universal Mentor Bot: как работает система</text>
+  <text x="82" y="122" class="subtitle">Discord-бот менторства: универсальное ядро + игровые плагины. Первый плагин — ARK: Survival Evolved.</text>
+
+  <rect x="60" y="170" width="1480" height="390" class="panel"/>
+  <text x="90" y="225" class="section">1. Архитектура</text>
+
+  <rect x="110" y="275" width="220" height="120" class="box"/>
+  <text x="135" y="320" class="label">Discord</text>
+  <text x="135" y="350" class="small">Slash-команды</text>
+  <text x="135" y="378" class="small">Modals / Buttons</text>
+
+  <rect x="410" y="250" width="250" height="170" class="box2"/>
+  <text x="435" y="295" class="label">MentorBot</text>
+  <text x="435" y="325" class="small">bot/main.py</text>
+  <text x="435" y="355" class="small">intents + setup_hook</text>
+  <text x="435" y="385" class="small">sync slash commands</text>
+
+  <rect x="750" y="250" width="270" height="170" class="box"/>
+  <text x="775" y="295" class="label">Cogs</text>
+  <text x="775" y="325" class="small">mentor / newbie</text>
+  <text x="775" y="355" class="small">admin / sessions</text>
+  <text x="775" y="385" class="small">reputation / notify</text>
+
+  <rect x="1110" y="250" width="300" height="170" class="box3"/>
+  <text x="1135" y="295" class="label">Services + DB</text>
+  <text x="1135" y="325" class="small">matching, sessions</text>
+  <text x="1135" y="355" class="small">reports, logs, reviews</text>
+  <text x="1135" y="385" class="small">SQLite / SQLAlchemy async</text>
+
+  <rect x="410" y="455" width="1000" height="70" class="box4"/>
+  <text x="435" y="500" class="label">GamePlugin Registry → ark_se: специализации, safety rules, review tags, 14 дней, карантин 3 сессии</text>
+
+  <path d="M330 335 L410 335" class="arrowBlue"/>
+  <path d="M660 335 L750 335" class="arrowBlue"/>
+  <path d="M1020 335 L1110 335" class="arrowGreen"/>
+  <path d="M535 420 L535 455" class="arrow"/>
+
+  <rect x="60" y="610" width="1480" height="560" class="panel"/>
+  <text x="90" y="665" class="section">2. Основной поток: от заявки до приватного канала</text>
+
+  <rect x="100" y="725" width="190" height="100" class="box"/>
+  <text x="125" y="765" class="label">Ментор</text>
+  <text x="125" y="795" class="small">/mentor_register</text>
+
+  <rect x="360" y="725" width="230" height="100" class="box2"/>
+  <text x="385" y="765" class="label">Заявка</text>
+  <text x="385" y="795" class="small">status=pending</text>
+
+  <rect x="660" y="725" width="230" height="100" class="box3"/>
+  <text x="685" y="765" class="label">Админ</text>
+  <text x="685" y="795" class="small">/admin_approve</text>
+
+  <rect x="960" y="725" width="260" height="100" class="box3"/>
+  <text x="985" y="765" class="label">Approved mentor</text>
+  <text x="985" y="795" class="small">роль «Ментор»</text>
+
+  <rect x="100" y="920" width="190" height="100" class="box"/>
+  <text x="125" y="960" class="label">Новичок</text>
+  <text x="125" y="990" class="small">/find_mentor</text>
+
+  <rect x="360" y="920" width="230" height="100" class="box2"/>
+  <text x="385" y="960" class="label">Матчинг</text>
+  <text x="385" y="990" class="small">top-5 менторов</text>
+
+  <rect x="660" y="920" width="230" height="100" class="box2"/>
+  <text x="685" y="960" class="label">Запрос</text>
+  <text x="685" y="990" class="small">ЛС ментору</text>
+
+  <rect x="960" y="920" width="260" height="100" class="box3"/>
+  <text x="985" y="960" class="label">Сессия</text>
+  <text x="985" y="990" class="small">приватный канал</text>
+
+  <rect x="1290" y="920" width="180" height="100" class="box4"/>
+  <text x="1315" y="960" class="label">Отзывы</text>
+  <text x="1315" y="990" class="small">rating + tags</text>
+
+  <path d="M290 775 L360 775" class="arrowBlue"/>
+  <path d="M590 775 L660 775" class="arrowBlue"/>
+  <path d="M890 775 L960 775" class="arrowGreen"/>
+  <path d="M290 970 L360 970" class="arrowBlue"/>
+  <path d="M590 970 L660 970" class="arrowBlue"/>
+  <path d="M890 970 L960 970" class="arrowGreen"/>
+  <path d="M1220 970 L1290 970" class="arrow"/>
+  <path d="M1090 825 C1090 875 1090 875 1090 920" class="arrow"/>
+
+  <rect x="100" y="1060" width="1370" height="65" class="warn"/>
+  <text x="125" y="1102" class="label">Во время сессии: канал логируется, бот напоминает правила безопасности, /report создаёт тикет модераторам.</text>
+
+  <rect x="60" y="1220" width="720" height="420" class="panel"/>
+  <text x="90" y="1275" class="section">3. Матчинг кандидатов</text>
+
+  <rect x="110" y="1325" width="260" height="70" class="box"/>
+  <text x="135" y="1368" class="label">1. Язык совпадает</text>
+  <rect x="440" y="1325" width="260" height="70" class="box"/>
+  <text x="465" y="1368" class="label">2. UTC ≤ 3 часа</text>
+  <rect x="110" y="1435" width="260" height="70" class="box"/>
+  <text x="135" y="1478" class="label">3. Специализация</text>
+  <rect x="440" y="1435" width="260" height="70" class="box"/>
+  <text x="465" y="1478" class="label">4. Есть лимит</text>
+  <rect x="110" y="1545" width="590" height="70" class="box3"/>
+  <text x="135" y="1588" class="label">5. Сортировка: рейтинг → score → завершённые сессии</text>
+
+  <path d="M370 1360 L440 1360" class="arrowBlue"/>
+  <path d="M570 1395 L570 1435" class="arrowBlue"/>
+  <path d="M440 1470 L370 1470" class="arrowBlue"/>
+  <path d="M240 1505 L240 1545" class="arrowGreen"/>
+
+  <rect x="820" y="1220" width="720" height="420" class="panel"/>
+  <text x="850" y="1275" class="section">4. Жизненный цикл сессии</text>
+
+  <rect x="870" y="1325" width="210" height="70" class="box2"/>
+  <text x="895" y="1368" class="label">pending_request</text>
+  <rect x="1160" y="1325" width="210" height="70" class="box3"/>
+  <text x="1210" y="1368" class="label">active</text>
+  <rect x="1160" y="1450" width="210" height="70" class="box4"/>
+  <text x="1205" y="1493" class="label">report_open</text>
+  <rect x="870" y="1575" width="210" height="70" class="box3"/>
+  <text x="920" y="1618" class="label">completed</text>
+  <rect x="1160" y="1575" width="210" height="70" class="box"/>
+  <text x="1220" y="1618" class="label">archive</text>
+
+  <path d="M1080 1360 L1160 1360" class="arrowGreen"/>
+  <path d="M1265 1395 L1265 1450" class="arrow"/>
+  <path d="M1160 1485 C1100 1495 1040 1535 1020 1575" class="arrow"/>
+  <path d="M1080 1610 L1160 1610" class="arrowGreen"/>
+  <path d="M1265 1520 L1265 1575" class="arrow"/>
+  <text x="1120" y="1310" class="note">принять</text>
+  <text x="1280" y="1430" class="note">жалоба</text>
+  <text x="1035" y="1545" class="note">завершить</text>
+
+  <rect x="60" y="1690" width="1480" height="330" class="panel"/>
+  <text x="90" y="1745" class="section">5. Безопасность и контроль администрации</text>
+  <rect x="100" y="1800" width="250" height="100" class="warn"/>
+  <text x="125" y="1840" class="label">PVP-риски</text>
+  <text x="125" y="1870" class="small">координаты, пароли, PIN</text>
+  <rect x="430" y="1800" width="250" height="100" class="box4"/>
+  <text x="455" y="1840" class="label">Safety rules</text>
+  <text x="455" y="1870" class="small">закреп в канале</text>
+  <rect x="760" y="1800" width="250" height="100" class="box4"/>
+  <text x="785" y="1840" class="label">ChannelLog</text>
+  <text x="785" y="1870" class="small">сообщения в БД</text>
+  <rect x="1090" y="1800" width="250" height="100" class="box4"/>
+  <text x="1115" y="1840" class="label">Report</text>
+  <text x="1115" y="1870" class="small">тикет модераторам</text>
+  <rect x="1090" y="1935" width="250" height="60" class="box3"/>
+  <text x="1115" y="1974" class="label">resolve / dismiss / ban</text>
+
+  <path d="M350 1850 L430 1850" class="arrow"/>
+  <path d="M680 1850 L760 1850" class="arrow"/>
+  <path d="M1010 1850 L1090 1850" class="arrow"/>
+  <path d="M1215 1900 L1215 1935" class="arrowGreen"/>
+
+  <text x="80" y="2070" class="note">Команды: /mentor_register, /find_mentor, /profile, /admin_approve, /admin_stats, /finish_session, /report, /review, /leaderboard.</text>
+</svg>
