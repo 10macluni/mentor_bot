@@ -23,9 +23,6 @@ class Settings:
     mentor_session_days: int
     security_reminder_days: int
     request_timeout_hours: int
-    staffing_mode: str
-    probation_sessions: int
-    probation_max_newbies: int
     log_level: str
 
     @classmethod
@@ -43,15 +40,8 @@ class Settings:
             mentor_session_days=int(os.getenv("MENTOR_SESSION_DAYS", "14")),
             security_reminder_days=int(os.getenv("SECURITY_REMINDER_DAYS", "3")),
             request_timeout_hours=int(os.getenv("REQUEST_TIMEOUT_HOURS", "24")),
-            staffing_mode=os.getenv("STAFFING_MODE", "low_staff").strip().lower(),
-            probation_sessions=int(os.getenv("PROBATION_SESSIONS", "3")),
-            probation_max_newbies=int(os.getenv("PROBATION_MAX_NEWBIES", "1")),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
         )
-
-    @property
-    def low_staff_enabled(self) -> bool:
-        return self.staffing_mode == "low_staff"
 
     @property
     def sqlite_path(self) -> Path | None:

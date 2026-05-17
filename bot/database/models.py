@@ -16,7 +16,6 @@ class Base(DeclarativeBase):
 
 
 class MentorStatus(str, enum.Enum):
-    pending = "pending"
     probation = "probation"
     approved = "approved"
     rejected = "rejected"
@@ -63,7 +62,7 @@ class Mentor(Base):
     experience: Mapped[str] = mapped_column(Text, default="")
     max_newbies: Mapped[int] = mapped_column(Integer, default=1)
     schedule: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
-    status: Mapped[str] = mapped_column(String(16), default=MentorStatus.pending.value, index=True)
+    status: Mapped[str] = mapped_column(String(16), default=MentorStatus.probation.value, index=True)
     rating: Mapped[float] = mapped_column(Float, default=0.0)
     total_sessions: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

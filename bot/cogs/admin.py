@@ -70,7 +70,7 @@ class AdminCog(commands.Cog):
             mentor = (await db.execute(select(Mentor).where(Mentor.discord_id == user.id))).scalar_one_or_none()
             newbie = (await db.execute(select(Newbie).where(Newbie.discord_id == user.id))).scalar_one_or_none()
             if mentor and mentor.status == MentorStatus.banned.value:
-                mentor.status = MentorStatus.probation.value if self.settings.low_staff_enabled else MentorStatus.pending.value
+                mentor.status = MentorStatus.probation.value
             if newbie and newbie.status == "banned":
                 newbie.status = "searching"
             await db.commit()

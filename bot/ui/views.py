@@ -15,6 +15,7 @@ from bot.database.models import (
     SessionStatus,
 )
 from bot.plugins.base import GamePlugin
+from bot.services.matching import PROBATION_MAX_NEWBIES
 from bot.services.reports import create_report
 from bot.services.sessions import (
     archive_channel,
@@ -106,7 +107,7 @@ class MentorRequestResponseView(discord.ui.View):
             if not request or request.status != RequestStatus.pending.value:
                 await interaction.followup.send("Запрос уже обработан или не найден.", ephemeral=True)
                 return
-            if request.mentor.status not in _matchable_statuses(self.settings):
+            if request.mentor.status not in _matchable_statuses():
                 await interaction.followup.send("Ментор сейчас недоступен для новых сессий.", ephemeral=True)
                 return
             active_sessions = (
@@ -117,7 +118,7 @@ class MentorRequestResponseView(discord.ui.View):
                     )
                 )
             ).scalar_one()
-            if active_sessions >= _mentor_capacity(request.mentor, self.settings):
+            if active_sessions >= _mentor_capacity(request.mentor):
                 await interaction.followup.send("Лимит активных новичков уже достигнут.", ephemeral=True)
                 return
             mentor_member = guild.get_member(
@@ -194,7 +195,6 @@ class SessionActionsView(discord.ui.View):
             await finish_mentorship_session(
                 db,
                 mentor_session,
-                settings=self.settings,
                 plugin=self.plugin,
             )
             await db.commit()
@@ -219,13 +219,11 @@ class SessionActionsView(discord.ui.View):
         )
 
 
-def _matchable_statuses(settings: Settings) -> tuple[str, ...]:
-    if settings.low_staff_enabled:
-        return (MentorStatus.approved.value, MentorStatus.probation.value)
-    return (MentorStatus.approved.value,)
+def _matchable_statuses() -> tuple[str, ...]:
+    return (MentorStatus.approved.value, MentorStatus.probation.value)
 
 
-def _mentor_capacity(mentor: Mentor, settings: Settings) -> int:
+def _mentor_capacity(mentor: Mentor) -> int:
     if mentor.status == MentorStatus.probation.value:
-        return min(mentor.max_newbies, settings.probation_max_newbies)
+        return min(mentor.max_newbies, PROBATION_MAX_NEWBIES)
     return mentor.max_newbies

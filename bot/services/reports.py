@@ -3,7 +3,6 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.config import Settings
 from bot.database.models import Mentor, MentorSession, MentorStatus, Report, ReportStatus
 
 
@@ -14,8 +13,8 @@ async def create_report(session: AsyncSession, session_id: int, reporter_id: int
     return report
 
 
-async def apply_low_staff_report_sanction(session: AsyncSession, report: Report, settings: Settings) -> str | None:
-    if not settings.low_staff_enabled or report.status != ReportStatus.resolved.value:
+async def apply_low_staff_report_sanction(session: AsyncSession, report: Report) -> str | None:
+    if report.status != ReportStatus.resolved.value:
         return None
     mentor = (
         await session.execute(

@@ -75,7 +75,6 @@ async def finish_mentorship_session(
     db: AsyncSession,
     mentor_session: MentorSession,
     status: str = SessionStatus.completed.value,
-    settings: Settings | None = None,
     plugin: GamePlugin | None = None,
 ) -> None:
     mentor_session.status = status
@@ -83,19 +82,18 @@ async def finish_mentorship_session(
     mentor_session.mentor.total_sessions += 1
     mentor_session.newbie.status = "completed"
     await db.flush()
-    if settings and plugin:
-        await maybe_promote_probation_mentor(db, mentor_session.mentor, settings, plugin)
+    if plugin:
+        await maybe_promote_probation_mentor(db, mentor_session.mentor, plugin)
 
 
 async def maybe_promote_probation_mentor(
     db: AsyncSession,
     mentor: Mentor,
-    settings: Settings,
     plugin: GamePlugin,
 ) -> bool:
-    if not settings.low_staff_enabled or mentor.status != MentorStatus.probation.value:
+    if mentor.status != MentorStatus.probation.value:
         return False
-    required_sessions = max(1, settings.probation_sessions or plugin.quarantine_sessions)
+    required_sessions = max(1, plugin.quarantine_sessions)
     if mentor.total_sessions < required_sessions:
         return False
     open_reports = (

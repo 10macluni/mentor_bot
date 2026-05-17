@@ -8,8 +8,10 @@ from typing import Protocol
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.config import Settings
 from bot.database.models import Mentor, MentorSession, MentorStatus, Newbie, SessionStatus
+
+
+PROBATION_MAX_NEWBIES = 1
 
 
 class MentorLike(Protocol):
@@ -62,7 +64,7 @@ def find_matching_mentors(
     mentors: Sequence[MentorLike],
     active_session_counts: dict[int, int] | None = None,
     max_results: int = 5,
-    eligible_statuses: Collection[str] = (MentorStatus.approved.value,),
+    eligible_statuses: Collection[str] = (MentorStatus.approved.value, MentorStatus.probation.value),
     probation_max_newbies: int = 1,
 ) -> list[MentorCandidate]:
     counts = active_session_counts or {}
@@ -127,16 +129,13 @@ async def active_session_counts(session: AsyncSession) -> dict[int, int]:
     return {mentor_id: count for mentor_id, count in rows.all()}
 
 
-def matchable_mentor_statuses(settings: Settings) -> tuple[str, ...]:
-    if settings.low_staff_enabled:
-        return (MentorStatus.approved.value, MentorStatus.probation.value)
-    return (MentorStatus.approved.value,)
+def matchable_mentor_statuses() -> tuple[str, ...]:
+    return (MentorStatus.approved.value, MentorStatus.probation.value)
 
 
 async def find_matches_for_newbie(
     session: AsyncSession,
     newbie: Newbie,
-    settings: Settings,
     max_results: int = 5,
 ) -> list[MentorCandidate]:
     mentors = (
@@ -148,6 +147,6 @@ async def find_matches_for_newbie(
         mentors,
         counts,
         max_results=max_results,
-        eligible_statuses=matchable_mentor_statuses(settings),
-        probation_max_newbies=settings.probation_max_newbies,
+        eligible_statuses=matchable_mentor_statuses(),
+        probation_max_newbies=PROBATION_MAX_NEWBIES,
     )

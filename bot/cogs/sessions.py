@@ -39,7 +39,7 @@ class SessionsCog(commands.Cog):
             if interaction.user.id not in allowed:
                 await interaction.followup.send("Завершить сессию может только участник или администратор.", ephemeral=True)
                 return
-            await finish_mentorship_session(db, mentor_session, settings=self.settings, plugin=self.plugin)
+            await finish_mentorship_session(db, mentor_session, plugin=self.plugin)
             await db.commit()
         if interaction.guild and mentor_session.channel_id:
             await archive_channel(interaction.guild, mentor_session.channel_id, self.settings)
@@ -85,7 +85,7 @@ class SessionsCog(commands.Cog):
             report.status = ReportStatus.resolved.value if resolved else ReportStatus.dismissed.value
             report.resolved_by = interaction.user.id
             report.resolved_at = utcnow()
-            sanction = await apply_low_staff_report_sanction(db, report, self.settings)
+            sanction = await apply_low_staff_report_sanction(db, report)
             await db.commit()
         message = "Жалоба закрыта."
         if sanction:

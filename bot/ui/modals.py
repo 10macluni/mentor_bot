@@ -74,20 +74,13 @@ class MentorRegistrationModal(discord.ui.Modal):
             mentor.experience = details.get("experience", str(self.experience.value).strip())
             mentor.max_newbies = max_newbies
             mentor.schedule = parse_schedule(details.get("schedule", ""))
-            mentor.status = (
-                MentorStatus.probation.value
-                if self.settings.low_staff_enabled
-                else MentorStatus.pending.value
-            )
+            mentor.status = MentorStatus.probation.value
             await db.commit()
-        if self.settings.low_staff_enabled:
-            await _assign_mentor_role(interaction, self.settings)
-            message = (
-                "Анкета ментора активирована в режиме карантина: можно брать 1 новичка одновременно. "
-                "После успешных сессий бот повысит статус автоматически."
-            )
-        else:
-            message = "Анкета ментора отправлена на рассмотрение администрации."
+        await _assign_mentor_role(interaction, self.settings)
+        message = (
+            "Анкета ментора активирована в режиме карантина: можно брать 1 новичка одновременно. "
+            "После успешных сессий бот повысит статус автоматически."
+        )
         await interaction.response.send_message(message, ephemeral=True)
 
 
@@ -134,7 +127,7 @@ class NewbieFindMentorModal(discord.ui.Modal):
             newbie.comment = str(self.comment.value).strip()
             newbie.status = "searching"
             await db.flush()
-            matches = await find_matches_for_newbie(db, newbie, self.settings)
+            matches = await find_matches_for_newbie(db, newbie)
             await db.commit()
         if not matches:
             await interaction.response.send_message(
