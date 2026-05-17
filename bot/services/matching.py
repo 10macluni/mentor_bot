@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.models import Mentor, MentorSession, MentorStatus, Newbie, SessionStatus
 
-
 PROBATION_MAX_NEWBIES = 1
 
 
