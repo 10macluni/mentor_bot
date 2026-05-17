@@ -17,6 +17,7 @@ class Base(DeclarativeBase):
 
 class MentorStatus(str, enum.Enum):
     pending = "pending"
+    probation = "probation"
     approved = "approved"
     rejected = "rejected"
     banned = "banned"

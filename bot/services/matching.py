@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.database.models import Mentor, MentorSession, Newbie, SessionStatus
+from bot.config import Settings
+from bot.database.models import Mentor, MentorSession, MentorStatus, Newbie, SessionStatus
 
 
 class MentorLike(Protocol):
@@ -61,14 +62,17 @@ def find_matching_mentors(
     mentors: Sequence[MentorLike],
     active_session_counts: dict[int, int] | None = None,
     max_results: int = 5,
+    eligible_statuses: Collection[str] = (MentorStatus.approved.value,),
+    probation_max_newbies: int = 1,
 ) -> list[MentorCandidate]:
     counts = active_session_counts or {}
+    eligible_status_set = set(eligible_statuses)
     candidates: list[MentorCandidate] = []
     newbie_needs = set(newbie.needs)
     newbie_language = newbie.language.lower()
 
     for mentor in mentors:
-        if mentor.game_key != newbie.game_key or mentor.status != "approved":
+        if mentor.game_key != newbie.game_key or mentor.status not in eligible_status_set:
             continue
         if newbie_language not in {language.lower() for language in mentor.languages}:
             continue
@@ -79,9 +83,20 @@ def find_matching_mentors(
         if not overlap:
             continue
         active_count = counts.get(mentor.id, 0)
-        if active_count >= mentor.max_newbies:
+        capacity = mentor.max_newbies
+        probation_penalty = 0
+        if mentor.status == MentorStatus.probation.value:
+            capacity = min(capacity, probation_max_newbies)
+            probation_penalty = 25
+        if active_count >= capacity:
             continue
-        score = (mentor.rating * 100) + (mentor.total_sessions * 2) + (len(overlap) * 10) - delta
+        score = (
+            (mentor.rating * 100)
+            + (mentor.total_sessions * 2)
+            + (len(overlap) * 10)
+            - delta
+            - probation_penalty
+        )
         candidates.append(
             MentorCandidate(
                 mentor=mentor,
@@ -112,7 +127,27 @@ async def active_session_counts(session: AsyncSession) -> dict[int, int]:
     return {mentor_id: count for mentor_id, count in rows.all()}
 
 
-async def find_matches_for_newbie(session: AsyncSession, newbie: Newbie, max_results: int = 5) -> list[MentorCandidate]:
-    mentors = (await session.execute(select(Mentor).where(Mentor.game_key == newbie.game_key))).scalars().all()
+def matchable_mentor_statuses(settings: Settings) -> tuple[str, ...]:
+    if settings.low_staff_enabled:
+        return (MentorStatus.approved.value, MentorStatus.probation.value)
+    return (MentorStatus.approved.value,)
+
+
+async def find_matches_for_newbie(
+    session: AsyncSession,
+    newbie: Newbie,
+    settings: Settings,
+    max_results: int = 5,
+) -> list[MentorCandidate]:
+    mentors = (
+        await session.execute(select(Mentor).where(Mentor.game_key == newbie.game_key))
+    ).scalars().all()
     counts = await active_session_counts(session)
-    return find_matching_mentors(newbie, mentors, counts, max_results=max_results)
+    return find_matching_mentors(
+        newbie,
+        mentors,
+        counts,
+        max_results=max_results,
+        eligible_statuses=matchable_mentor_statuses(settings),
+        probation_max_newbies=settings.probation_max_newbies,
+    )

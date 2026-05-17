@@ -1,14 +1,26 @@
 from __future__ import annotations
 
 import discord
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from bot.config import Settings
-from bot.database.models import Mentor, MentorRequest, MentorSession, Newbie, RequestStatus, SessionStatus
+from bot.database.models import (
+    Mentor,
+    MentorRequest,
+    MentorSession,
+    MentorStatus,
+    Newbie,
+    RequestStatus,
+    SessionStatus,
+)
 from bot.plugins.base import GamePlugin
 from bot.services.reports import create_report
-from bot.services.sessions import archive_channel, create_mentorship_session, finish_mentorship_session
+from bot.services.sessions import (
+    archive_channel,
+    create_mentorship_session,
+    finish_mentorship_session,
+)
 from bot.ui.embeds import newbie_profile_embed
 
 
@@ -32,9 +44,16 @@ class MentorMatchesView(discord.ui.View):
             await interaction.response.defer(ephemeral=True)
             async with self.async_session_factory() as db:
                 newbie = (
-                    await db.execute(select(Newbie).where(Newbie.discord_id == interaction.user.id, Newbie.game_key == self.plugin.key))
+                    await db.execute(
+                        select(Newbie).where(
+                            Newbie.discord_id == interaction.user.id,
+                            Newbie.game_key == self.plugin.key,
+                        )
+                    )
                 ).scalar_one_or_none()
-                mentor = (await db.execute(select(Mentor).where(Mentor.id == mentor_id))).scalar_one_or_none()
+                mentor = (
+                    await db.execute(select(Mentor).where(Mentor.id == mentor_id))
+                ).scalar_one_or_none()
                 if not newbie or not mentor:
                     await interaction.followup.send("Анкета не найдена. Заполните /find_mentor ещё раз.", ephemeral=True)
                     return
@@ -42,11 +61,18 @@ class MentorMatchesView(discord.ui.View):
                 db.add(request)
                 await db.commit()
 
-            mentor_user = interaction.client.get_user(mentor.discord_id) or await interaction.client.fetch_user(mentor.discord_id)
+            mentor_user = interaction.client.get_user(
+                mentor.discord_id
+            ) or await interaction.client.fetch_user(mentor.discord_id)
             await mentor_user.send(
                 "Новый запрос на менторство.",
                 embed=newbie_profile_embed(newbie, self.plugin),
-                view=MentorRequestResponseView(request.id, self.async_session_factory, self.plugin, self.settings),
+                view=MentorRequestResponseView(
+                    request.id,
+                    self.async_session_factory,
+                    self.plugin,
+                    self.settings,
+                ),
             )
             await interaction.followup.send("Запрос отправлен ментору в ЛС.", ephemeral=True)
 
@@ -80,8 +106,26 @@ class MentorRequestResponseView(discord.ui.View):
             if not request or request.status != RequestStatus.pending.value:
                 await interaction.followup.send("Запрос уже обработан или не найден.", ephemeral=True)
                 return
-            mentor_member = guild.get_member(request.mentor.discord_id) or await guild.fetch_member(request.mentor.discord_id)
-            newbie_member = guild.get_member(request.newbie.discord_id) or await guild.fetch_member(request.newbie.discord_id)
+            if request.mentor.status not in _matchable_statuses(self.settings):
+                await interaction.followup.send("Ментор сейчас недоступен для новых сессий.", ephemeral=True)
+                return
+            active_sessions = (
+                await db.execute(
+                    select(func.count(MentorSession.id)).where(
+                        MentorSession.mentor_id == request.mentor_id,
+                        MentorSession.status == SessionStatus.active.value,
+                    )
+                )
+            ).scalar_one()
+            if active_sessions >= _mentor_capacity(request.mentor, self.settings):
+                await interaction.followup.send("Лимит активных новичков уже достигнут.", ephemeral=True)
+                return
+            mentor_member = guild.get_member(
+                request.mentor.discord_id
+            ) or await guild.fetch_member(request.mentor.discord_id)
+            newbie_member = guild.get_member(
+                request.newbie.discord_id
+            ) or await guild.fetch_member(request.newbie.discord_id)
             request.status = RequestStatus.accepted.value
             await create_mentorship_session(
                 db,
@@ -105,7 +149,9 @@ class MentorRequestResponseView(discord.ui.View):
     async def reject(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await interaction.response.defer(ephemeral=True)
         async with self.async_session_factory() as db:
-            request = (await db.execute(select(MentorRequest).where(MentorRequest.id == self.request_id))).scalar_one_or_none()
+            request = (
+                await db.execute(select(MentorRequest).where(MentorRequest.id == self.request_id))
+            ).scalar_one_or_none()
             if request and request.status == RequestStatus.pending.value:
                 request.status = RequestStatus.rejected.value
                 await db.commit()
@@ -113,11 +159,18 @@ class MentorRequestResponseView(discord.ui.View):
 
 
 class SessionActionsView(discord.ui.View):
-    def __init__(self, mentor_session_id: int, async_session_factory, settings: Settings) -> None:
+    def __init__(
+        self,
+        mentor_session_id: int,
+        async_session_factory,
+        settings: Settings,
+        plugin: GamePlugin,
+    ) -> None:
         super().__init__(timeout=None)
         self.mentor_session_id = mentor_session_id
         self.async_session_factory = async_session_factory
         self.settings = settings
+        self.plugin = plugin
 
     @discord.ui.button(label="🏁 Завершить менторство", style=discord.ButtonStyle.secondary)
     async def finish(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -132,10 +185,18 @@ class SessionActionsView(discord.ui.View):
             if not mentor_session or mentor_session.status != SessionStatus.active.value:
                 await interaction.followup.send("Активная сессия не найдена.", ephemeral=True)
                 return
-            if interaction.user.id not in {mentor_session.mentor.discord_id, mentor_session.newbie.discord_id}:
+            if interaction.user.id not in {
+                mentor_session.mentor.discord_id,
+                mentor_session.newbie.discord_id,
+            }:
                 await interaction.followup.send("Завершить сессию может только участник.", ephemeral=True)
                 return
-            await finish_mentorship_session(db, mentor_session)
+            await finish_mentorship_session(
+                db,
+                mentor_session,
+                settings=self.settings,
+                plugin=self.plugin,
+            )
             await db.commit()
         if interaction.guild and mentor_session.channel_id:
             await archive_channel(interaction.guild, mentor_session.channel_id, self.settings)
@@ -144,9 +205,27 @@ class SessionActionsView(discord.ui.View):
     @discord.ui.button(label="🚨 Пожаловаться", style=discord.ButtonStyle.danger)
     async def report(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         async with self.async_session_factory() as db:
-            report = await create_report(db, self.mentor_session_id, interaction.user.id, "Жалоба создана кнопкой в канале")
+            report = await create_report(
+                db,
+                self.mentor_session_id,
+                interaction.user.id,
+                "Жалоба создана кнопкой в канале",
+            )
             await db.commit()
         await interaction.response.send_message(
-            f"Жалоба #{report.id} создана. Добавьте детали командой /report {self.mentor_session_id} <причина>.",
+            f"Жалоба #{report.id} создана. Добавьте детали командой "
+            f"/report {self.mentor_session_id} <причина>.",
             ephemeral=True,
         )
+
+
+def _matchable_statuses(settings: Settings) -> tuple[str, ...]:
+    if settings.low_staff_enabled:
+        return (MentorStatus.approved.value, MentorStatus.probation.value)
+    return (MentorStatus.approved.value,)
+
+
+def _mentor_capacity(mentor: Mentor, settings: Settings) -> int:
+    if mentor.status == MentorStatus.probation.value:
+        return min(mentor.max_newbies, settings.probation_max_newbies)
+    return mentor.max_newbies
