@@ -19,7 +19,6 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     participant Mentor as Ментор
-    participant Admin as Админ
     participant Newbie as Новичок
     participant Bot as Mentor Bot
     participant DB as БД
@@ -28,18 +27,16 @@ sequenceDiagram
     Mentor->>Bot: /mentor_register
     Bot->>Mentor: Модальная анкета
     Mentor->>Bot: Ник, UTC, языки, специализации, опыт, лимит, расписание
-    Bot->>DB: Mentor(status=pending)
-    Bot->>Admin: Уведомление о новой заявке
-    Admin->>Bot: /admin_approve @mentor
-    Bot->>DB: status=approved
+    Bot->>DB: Mentor(status=probation)
     Bot->>Discord: Выдать роль «Ментор»
+    Note over Bot,DB: low_staff: авто-допуск без ручного /admin_approve
 
     Newbie->>Bot: /find_mentor
     Bot->>Newbie: Модальная анкета
     Newbie->>Bot: Ник, UTC, язык, потребности, комментарий
     Bot->>DB: Newbie(status=searching)
-    Bot->>DB: Найти approved mentors + active session counts
-    Bot->>Bot: Матчинг: язык → UTC ≤ 3 → специализация → лимит → рейтинг
+    Bot->>DB: Найти approved/probation mentors + active session counts
+    Bot->>Bot: Матчинг: язык → UTC ≤ 3 → специализация → лимит → статус → рейтинг
     Bot->>Newbie: До 5 кандидатов + кнопки «Отправить запрос»
     Newbie->>Bot: Выбирает ментора
     Bot->>Mentor: ЛС с запросом: принять / отклонить
@@ -60,9 +57,11 @@ flowchart TD
     T -- нет --> X
     T -- да --> SP{Есть пересечение специализаций?}
     SP -- нет --> X
-    SP -- да --> CAP{Активных новичков < лимита?}
+    SP -- да --> ST{Статус approved или probation?}
+    ST -- нет --> X
+    ST -- да --> CAP{Активных новичков < лимита?\nprobation максимум 1}
     CAP -- нет --> X
-    CAP -- да --> SCORE[Скоринг:\nrating*100 + sessions*2 + overlap*10 - timezone_delta]
+    CAP -- да --> SCORE[Скоринг:\nrating*100 + sessions*2 + overlap*10 - timezone_delta\nprobation получает небольшой штраф]
     SCORE --> TOP[Отсортировать по рейтингу/score/опыту]
     TOP --> RESULT[Показать топ-5 кандидатов]
 ```
@@ -77,12 +76,14 @@ stateDiagram-v2
     pending_request --> expired: 24 часа без ответа
 
     active --> completed: /finish_session или кнопка завершения
+    completed --> approved: probation + 3 clean sessions
     active --> expired: Истёк срок 14 дней
     active --> active: /extend_session
     active --> report_open: /report или кнопка жалобы
 
     report_open --> active: Жалоба dismissed
-    report_open --> banned: Жалоба confirmed + /admin_ban
+    report_open --> probation: confirmed report against approved mentor
+    report_open --> banned: 3 confirmed reports or /admin_ban
     completed --> reviews: /review от участников
     reviews --> archived: Канал перенесён в архив
     archived --> [*]
@@ -92,7 +93,7 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-    A[Только approved менторы] --> B[Приватный канал]
+    A[Approved + probation менторы] --> B[Приватный канал]
     B --> C[Логирование сообщений\nChannelLog]
     C --> D[Модераторские команды\n/admin_logs /admin_sessions]
     B --> E[Напоминания безопасности\nкаждые 3 дня]
@@ -100,7 +101,8 @@ flowchart LR
     F --> R[Report(open)]
     R --> M[Модератор решает]
     M --> OK[Dismiss / Resolve]
-    M --> BAN[/admin_ban\nстатус banned + снять роль]
+    M --> PROB[1-я подтверждённая жалоба\napproved → probation]
+    M --> BAN[3 подтверждённые жалобы\nстатус banned]
 ```
 
 ## 6. Что делает плагин ARK SE
@@ -112,7 +114,7 @@ flowchart LR
 - PVP safety rules: не передавать координаты базы, пароли, PIN-коды, доступ к хранилищам;
 - теги отзывов для ментора и новичка;
 - дефолтный срок сессии: 14 дней;
-- карантин нового ментора: 3 первые сессии.
+- карантин нового ментора: 3 первые сессии до авто-повышения в `approved`.
 
 ## 7. Команды по ролям
 
@@ -120,5 +122,6 @@ flowchart LR
 |---|---|
 | Новичок | `/find_mentor`, `/profile`, `/report`, `/review` |
 | Ментор | `/mentor_register`, `/profile`, `/finish_session`, `/extend_session`, `/review` |
+| Карантинный ментор | Те же команды, но максимум 1 активный новичок до авто-повышения |
 | Админ | `/admin_approve`, `/admin_reject`, `/admin_ban`, `/admin_unban`, `/admin_settings`, `/admin_stats` |
 | Модератор | `/admin_sessions`, `/admin_logs`, `/resolve_report` |

@@ -3,10 +3,20 @@ from __future__ import annotations
 from datetime import timedelta
 
 import discord
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.config import Settings
-from bot.database.models import Mentor, MentorSession, Newbie, SessionStatus, utcnow
+from bot.database.models import (
+    Mentor,
+    MentorSession,
+    MentorStatus,
+    Newbie,
+    Report,
+    ReportStatus,
+    SessionStatus,
+    utcnow,
+)
 from bot.plugins.base import GamePlugin
 from bot.ui.embeds import session_intro_embed
 from bot.utils.helpers import slugify_channel_part
@@ -51,7 +61,7 @@ async def create_mentorship_session(
     if async_session_factory is not None:
         from bot.ui.views import SessionActionsView
 
-        view = SessionActionsView(mentor_session.id, async_session_factory, settings)
+        view = SessionActionsView(mentor_session.id, async_session_factory, settings, plugin)
 
     message = await channel.send(
         embed=session_intro_embed(mentor, newbie, plugin),
@@ -61,12 +71,43 @@ async def create_mentorship_session(
     return mentor_session
 
 
-async def finish_mentorship_session(db: AsyncSession, mentor_session: MentorSession, status: str = SessionStatus.completed.value) -> None:
+async def finish_mentorship_session(
+    db: AsyncSession,
+    mentor_session: MentorSession,
+    status: str = SessionStatus.completed.value,
+    plugin: GamePlugin | None = None,
+) -> None:
     mentor_session.status = status
     mentor_session.ended_at = utcnow()
     mentor_session.mentor.total_sessions += 1
     mentor_session.newbie.status = "completed"
     await db.flush()
+    if plugin:
+        await maybe_promote_probation_mentor(db, mentor_session.mentor, plugin)
+
+
+async def maybe_promote_probation_mentor(
+    db: AsyncSession,
+    mentor: Mentor,
+    plugin: GamePlugin,
+) -> bool:
+    if mentor.status != MentorStatus.probation.value:
+        return False
+    required_sessions = max(1, plugin.quarantine_sessions)
+    if mentor.total_sessions < required_sessions:
+        return False
+    open_reports = (
+        await db.execute(
+            select(func.count(Report.id))
+            .join(MentorSession, Report.session_id == MentorSession.id)
+            .where(MentorSession.mentor_id == mentor.id, Report.status == ReportStatus.open.value)
+        )
+    ).scalar_one()
+    if open_reports:
+        return False
+    mentor.status = MentorStatus.approved.value
+    await db.flush()
+    return True
 
 
 async def archive_channel(guild: discord.Guild, channel_id: int, settings: Settings) -> None:

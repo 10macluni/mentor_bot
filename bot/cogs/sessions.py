@@ -9,9 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from bot.config import Settings
-from bot.database.models import MentorSession, Report, SessionStatus, utcnow
+from bot.database.models import MentorSession, Report, ReportStatus, SessionStatus, utcnow
 from bot.plugins.base import GamePlugin
-from bot.services.reports import create_report
+from bot.services.reports import apply_low_staff_report_sanction, create_report
 from bot.services.sessions import archive_channel, finish_mentorship_session
 
 
@@ -39,7 +39,7 @@ class SessionsCog(commands.Cog):
             if interaction.user.id not in allowed:
                 await interaction.followup.send("Завершить сессию может только участник или администратор.", ephemeral=True)
                 return
-            await finish_mentorship_session(db, mentor_session)
+            await finish_mentorship_session(db, mentor_session, plugin=self.plugin)
             await db.commit()
         if interaction.guild and mentor_session.channel_id:
             await archive_channel(interaction.guild, mentor_session.channel_id, self.settings)
@@ -82,11 +82,15 @@ class SessionsCog(commands.Cog):
             if not report:
                 await interaction.response.send_message("Жалоба не найдена.", ephemeral=True)
                 return
-            report.status = "resolved" if resolved else "dismissed"
+            report.status = ReportStatus.resolved.value if resolved else ReportStatus.dismissed.value
             report.resolved_by = interaction.user.id
             report.resolved_at = utcnow()
+            sanction = await apply_low_staff_report_sanction(db, report)
             await db.commit()
-        await interaction.response.send_message("Жалоба закрыта.", ephemeral=True)
+        message = "Жалоба закрыта."
+        if sanction:
+            message = f"Жалоба закрыта, авто-санкция применена: {sanction}."
+        await interaction.response.send_message(message, ephemeral=True)
 
 
 async def setup(bot: commands.Bot, async_session_factory, plugin: GamePlugin, settings: Settings) -> None:

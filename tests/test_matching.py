@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import pytest
 
+from bot.database.models import MentorStatus
 from bot.services.matching import find_matching_mentors, parse_utc_offset, timezone_delta
 
 
@@ -44,6 +45,28 @@ def test_matching_applies_language_timezone_specialization_capacity_and_rating()
     assert [match.mentor.game_nick for match in matches] == ["Top", "Low"]
     assert matches[0].matched_specializations == ("pvp",)
     assert matches[0].timezone_delta == 2
+
+
+def test_low_staff_matching_allows_probation_with_limited_capacity() -> None:
+    newbie = NewbieStub("ark_se", "UTC+3", "ru", ["pvp"])
+    mentors = [
+        MentorStub(
+            1, 10, "ark_se", "Probation", "UTC+3", ["ru"], ["pvp"], 5, MentorStatus.probation.value, 4.0, 0
+        ),
+        MentorStub(
+            2, 20, "ark_se", "FullProbation", "UTC+3", ["ru"], ["pvp"], 5, MentorStatus.probation.value, 5.0, 0
+        ),
+    ]
+
+    matches = find_matching_mentors(
+        newbie,
+        mentors,
+        active_session_counts={2: 1},
+        eligible_statuses=(MentorStatus.approved.value, MentorStatus.probation.value),
+        probation_max_newbies=1,
+    )
+
+    assert [match.mentor.game_nick for match in matches] == ["Probation"]
 
 
 def test_parse_utc_offset_and_delta() -> None:

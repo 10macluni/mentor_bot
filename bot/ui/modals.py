@@ -4,7 +4,7 @@ import discord
 from sqlalchemy import select
 
 from bot.config import Settings
-from bot.database.models import Mentor, Newbie, Review
+from bot.database.models import Mentor, MentorStatus, Newbie, Review
 from bot.plugins.base import GamePlugin
 from bot.services.matching import find_matches_for_newbie
 from bot.services.reputation import recalculate_mentor_rating, validate_rating
@@ -22,13 +22,22 @@ class MentorRegistrationModal(discord.ui.Modal):
         self.game_nick = discord.ui.TextInput(label=plugin.mentor_nick_label, max_length=64)
         self.timezone = discord.ui.TextInput(label="Часовой пояс, например UTC+3", max_length=10)
         self.languages = discord.ui.TextInput(label="Языки через запятую: RU, EN", max_length=128)
-        self.specializations = discord.ui.TextInput(label="Специализации ключами через запятую", style=discord.TextStyle.paragraph)
+        self.specializations = discord.ui.TextInput(
+            label="Специализации ключами через запятую",
+            style=discord.TextStyle.paragraph,
+        )
         self.experience = discord.ui.TextInput(
             label="Опыт; max=1-5; schedule=пн 18-22",
             style=discord.TextStyle.paragraph,
             required=False,
         )
-        for item in (self.game_nick, self.timezone, self.languages, self.specializations, self.experience):
+        for item in (
+            self.game_nick,
+            self.timezone,
+            self.languages,
+            self.specializations,
+            self.experience,
+        ):
             self.add_item(item)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
@@ -47,7 +56,14 @@ class MentorRegistrationModal(discord.ui.Modal):
             await interaction.response.send_message("max должен быть числом от 1 до 5.", ephemeral=True)
             return
         async with self.async_session_factory() as db:
-            mentor = (await db.execute(select(Mentor).where(Mentor.discord_id == interaction.user.id, Mentor.game_key == self.plugin.key))).scalar_one_or_none()
+            mentor = (
+                await db.execute(
+                    select(Mentor).where(
+                        Mentor.discord_id == interaction.user.id,
+                        Mentor.game_key == self.plugin.key,
+                    )
+                )
+            ).scalar_one_or_none()
             if not mentor:
                 mentor = Mentor(discord_id=interaction.user.id, game_key=self.plugin.key)
                 db.add(mentor)
@@ -58,9 +74,14 @@ class MentorRegistrationModal(discord.ui.Modal):
             mentor.experience = details.get("experience", str(self.experience.value).strip())
             mentor.max_newbies = max_newbies
             mentor.schedule = parse_schedule(details.get("schedule", ""))
-            mentor.status = "pending"
+            mentor.status = MentorStatus.probation.value
             await db.commit()
-        await interaction.response.send_message("Анкета ментора отправлена на рассмотрение администрации.", ephemeral=True)
+        await _assign_mentor_role(interaction, self.settings)
+        message = (
+            "Анкета ментора активирована в режиме карантина: можно брать 1 новичка одновременно. "
+            "После успешных сессий бот повысит статус автоматически."
+        )
+        await interaction.response.send_message(message, ephemeral=True)
 
 
 class NewbieFindMentorModal(discord.ui.Modal):
@@ -73,7 +94,11 @@ class NewbieFindMentorModal(discord.ui.Modal):
         self.timezone = discord.ui.TextInput(label="Часовой пояс, например UTC+3", max_length=10)
         self.language = discord.ui.TextInput(label="Язык: RU / EN / другое", max_length=16)
         self.needs = discord.ui.TextInput(label="Что нужно ключами через запятую", style=discord.TextStyle.paragraph)
-        self.comment = discord.ui.TextInput(label="Комментарий", style=discord.TextStyle.paragraph, required=False)
+        self.comment = discord.ui.TextInput(
+            label="Комментарий",
+            style=discord.TextStyle.paragraph,
+            required=False,
+        )
         for item in (self.game_nick, self.timezone, self.language, self.needs, self.comment):
             self.add_item(item)
 
@@ -84,7 +109,14 @@ class NewbieFindMentorModal(discord.ui.Modal):
             await interaction.response.send_message(str(exc), ephemeral=True)
             return
         async with self.async_session_factory() as db:
-            newbie = (await db.execute(select(Newbie).where(Newbie.discord_id == interaction.user.id, Newbie.game_key == self.plugin.key))).scalar_one_or_none()
+            newbie = (
+                await db.execute(
+                    select(Newbie).where(
+                        Newbie.discord_id == interaction.user.id,
+                        Newbie.game_key == self.plugin.key,
+                    )
+                )
+            ).scalar_one_or_none()
             if not newbie:
                 newbie = Newbie(discord_id=interaction.user.id, game_key=self.plugin.key)
                 db.add(newbie)
@@ -103,7 +135,10 @@ class NewbieFindMentorModal(discord.ui.Modal):
                 ephemeral=True,
             )
             return
-        embeds = [mentor_candidate_embed(candidate.mentor, candidate.matched_specializations, self.plugin) for candidate in matches]
+        embeds = [
+            mentor_candidate_embed(candidate.mentor, candidate.matched_specializations, self.plugin)
+            for candidate in matches
+        ]
         await interaction.response.send_message(
             "Найдены подходящие менторы:",
             embeds=embeds,
@@ -141,9 +176,34 @@ class ReviewModal(discord.ui.Modal):
                 text=str(self.text.value).strip(),
             )
             db.add(review)
-            mentor = (await db.execute(select(Mentor).where(Mentor.discord_id == self.target_id))).scalar_one_or_none()
+            mentor = (
+                await db.execute(select(Mentor).where(Mentor.discord_id == self.target_id))
+            ).scalar_one_or_none()
             if mentor:
                 await db.flush()
                 await recalculate_mentor_rating(db, mentor)
             await db.commit()
         await interaction.response.send_message("Отзыв сохранён.", ephemeral=True)
+
+
+async def _assign_mentor_role(interaction: discord.Interaction, settings: Settings) -> None:
+    guild = interaction.guild
+    if guild is None:
+        return
+    role = discord.utils.get(guild.roles, name=settings.mentor_role_name)
+    if role is None:
+        return
+    member = (
+        interaction.user
+        if isinstance(interaction.user, discord.Member)
+        else guild.get_member(interaction.user.id)
+    )
+    if member is None:
+        try:
+            member = await guild.fetch_member(interaction.user.id)
+        except discord.HTTPException:
+            return
+    try:
+        await member.add_roles(role, reason="Mentor probation")
+    except discord.HTTPException:
+        return

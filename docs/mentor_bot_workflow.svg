@@ -25,8 +25,8 @@
   </defs>
 
   <rect class="bg" width="1600" height="2100"/>
-  <text x="80" y="80" class="title">Universal Mentor Bot: как работает система</text>
-  <text x="82" y="122" class="subtitle">Discord-бот менторства: универсальное ядро + игровые плагины. Первый плагин — ARK: Survival Evolved.</text>
+  <text x="80" y="80" class="title">Universal Mentor Bot: только low_staff</text>
+  <text x="82" y="122" class="subtitle">Авто-допуск менторов в probation, матчинг с лимитами, авто-повышение и постмодерация.</text>
 
   <rect x="60" y="170" width="1480" height="390" class="panel"/>
   <text x="90" y="225" class="section">1. Архитектура</text>
@@ -55,7 +55,7 @@
   <text x="1135" y="385" class="small">SQLite / SQLAlchemy async</text>
 
   <rect x="410" y="455" width="1000" height="70" class="box4"/>
-  <text x="435" y="500" class="label">GamePlugin Registry → ark_se: специализации, safety rules, review tags, 14 дней, карантин 3 сессии</text>
+  <text x="435" y="500" class="label">GamePlugin Registry → ark_se: специализации, safety rules, 14 дней, probation 3 clean sessions</text>
 
   <path d="M330 335 L410 335" class="arrowBlue"/>
   <path d="M660 335 L750 335" class="arrowBlue"/>
@@ -63,23 +63,23 @@
   <path d="M535 420 L535 455" class="arrow"/>
 
   <rect x="60" y="610" width="1480" height="560" class="panel"/>
-  <text x="90" y="665" class="section">2. Основной поток: от заявки до приватного канала</text>
+  <text x="90" y="665" class="section">2. Low_staff поток: без ручного одобрения каждого ментора</text>
 
   <rect x="100" y="725" width="190" height="100" class="box"/>
   <text x="125" y="765" class="label">Ментор</text>
   <text x="125" y="795" class="small">/mentor_register</text>
 
   <rect x="360" y="725" width="230" height="100" class="box2"/>
-  <text x="385" y="765" class="label">Заявка</text>
-  <text x="385" y="795" class="small">status=pending</text>
+  <text x="385" y="765" class="label">Авто-допуск</text>
+  <text x="385" y="795" class="small">status=probation</text>
 
   <rect x="660" y="725" width="230" height="100" class="box3"/>
-  <text x="685" y="765" class="label">Админ</text>
-  <text x="685" y="795" class="small">/admin_approve</text>
+  <text x="685" y="765" class="label">Карантин</text>
+  <text x="685" y="795" class="small">макс. 1 новичок</text>
 
   <rect x="960" y="725" width="260" height="100" class="box3"/>
-  <text x="985" y="765" class="label">Approved mentor</text>
-  <text x="985" y="795" class="small">роль «Ментор»</text>
+  <text x="985" y="765" class="label">Auto-approved</text>
+  <text x="985" y="795" class="small">3 clean sessions</text>
 
   <rect x="100" y="920" width="190" height="100" class="box"/>
   <text x="125" y="960" class="label">Новичок</text>
@@ -87,19 +87,19 @@
 
   <rect x="360" y="920" width="230" height="100" class="box2"/>
   <text x="385" y="960" class="label">Матчинг</text>
-  <text x="385" y="990" class="small">top-5 менторов</text>
+  <text x="385" y="990" class="small">approved + probation</text>
 
   <rect x="660" y="920" width="230" height="100" class="box2"/>
   <text x="685" y="960" class="label">Запрос</text>
-  <text x="685" y="990" class="small">ЛС ментору</text>
+  <text x="685" y="990" class="small">проверка лимитов</text>
 
   <rect x="960" y="920" width="260" height="100" class="box3"/>
   <text x="985" y="960" class="label">Сессия</text>
   <text x="985" y="990" class="small">приватный канал</text>
 
   <rect x="1290" y="920" width="180" height="100" class="box4"/>
-  <text x="1315" y="960" class="label">Отзывы</text>
-  <text x="1315" y="990" class="small">rating + tags</text>
+  <text x="1315" y="960" class="label">Жалобы</text>
+  <text x="1315" y="990" class="small">auto sanctions</text>
 
   <path d="M290 775 L360 775" class="arrowBlue"/>
   <path d="M590 775 L660 775" class="arrowBlue"/>
@@ -111,7 +111,7 @@
   <path d="M1090 825 C1090 875 1090 875 1090 920" class="arrow"/>
 
   <rect x="100" y="1060" width="1370" height="65" class="warn"/>
-  <text x="125" y="1102" class="label">Во время сессии: канал логируется, бот напоминает правила безопасности, /report создаёт тикет модераторам.</text>
+  <text x="125" y="1102" class="label">Во время сессии: логирование, safety reminders, /report, авто-санкции после подтверждения жалоб.</text>
 
   <rect x="60" y="1220" width="720" height="420" class="panel"/>
   <text x="90" y="1275" class="section">3. Матчинг кандидатов</text>
@@ -123,9 +123,9 @@
   <rect x="110" y="1435" width="260" height="70" class="box"/>
   <text x="135" y="1478" class="label">3. Специализация</text>
   <rect x="440" y="1435" width="260" height="70" class="box"/>
-  <text x="465" y="1478" class="label">4. Есть лимит</text>
+  <text x="465" y="1478" class="label">4. Статус + лимит</text>
   <rect x="110" y="1545" width="590" height="70" class="box3"/>
-  <text x="135" y="1588" class="label">5. Сортировка: рейтинг → score → завершённые сессии</text>
+  <text x="135" y="1588" class="label">5. Сортировка: approved выше; probation со штрафом</text>
 
   <path d="M370 1360 L440 1360" class="arrowBlue"/>
   <path d="M570 1395 L570 1435" class="arrowBlue"/>
@@ -144,7 +144,7 @@
   <rect x="870" y="1575" width="210" height="70" class="box3"/>
   <text x="920" y="1618" class="label">completed</text>
   <rect x="1160" y="1575" width="210" height="70" class="box"/>
-  <text x="1220" y="1618" class="label">archive</text>
+  <text x="1185" y="1618" class="label">approved/archive</text>
 
   <path d="M1080 1360 L1160 1360" class="arrowGreen"/>
   <path d="M1265 1395 L1265 1450" class="arrow"/>
@@ -168,14 +168,14 @@
   <text x="785" y="1870" class="small">сообщения в БД</text>
   <rect x="1090" y="1800" width="250" height="100" class="box4"/>
   <text x="1115" y="1840" class="label">Report</text>
-  <text x="1115" y="1870" class="small">тикет модераторам</text>
+  <text x="1115" y="1870" class="small">модератор решает</text>
   <rect x="1090" y="1935" width="250" height="60" class="box3"/>
-  <text x="1115" y="1974" class="label">resolve / dismiss / ban</text>
+  <text x="1115" y="1974" class="label">resolve → sanctions</text>
 
   <path d="M350 1850 L430 1850" class="arrow"/>
   <path d="M680 1850 L760 1850" class="arrow"/>
   <path d="M1010 1850 L1090 1850" class="arrow"/>
   <path d="M1215 1900 L1215 1935" class="arrowGreen"/>
 
-  <text x="80" y="2070" class="note">Команды: /mentor_register, /find_mentor, /profile, /admin_approve, /admin_stats, /finish_session, /report, /review, /leaderboard.</text>
+  <text x="80" y="2070" class="note">Команды: /mentor_register, /find_mentor, /profile, /admin_approve как override, /finish_session, /report, /review, /leaderboard.</text>
 </svg>
